@@ -1,5 +1,5 @@
 
-# myDiabetes
+# OneDiabetes
 
 Connect with any LibreView sensor and monitor glucose, insulin injections and more
 
