@@ -1,3 +1,5 @@
+//libreService.js
+
 const axios = require('axios');
 const crypto = require('crypto');
 require('dotenv').config();
@@ -14,16 +16,9 @@ const HEADERS = {
 async function setToken(email, password) {
     try {
         const loginData = { email, password };
-        console.log('Sending login request to LibreView:', loginData);
 
         // Send the login request
         const response = await axios.post(`${API_ENDPOINT}/llu/auth/login`, loginData, { headers: HEADERS });
-        
-        // Log the full response to check its structure
-        console.log("LibreView login response:", response.data);
-
-        // Log the raw response to inspect its structure
-        console.log('Raw response data:', response.data);
 
         // Ensure the response structure is as expected
         if (!response.data || !response.data.data || !response.data.data.authTicket || !response.data.data.authTicket.token) {
@@ -34,8 +29,6 @@ async function setToken(email, password) {
         // Direct extraction of the token and user ID
         const token = response.data.data.authTicket.token;  // Extract token directly
         const id = response.data.data.user.id;  // Extract user id directly
-        console.log('rEsPonSe dAta URgeNTE',response.data.data.authTicket.token)
-        // Check if token or id are missing
         if (!token || !id) {
             console.error('Missing token or user id:', { token, id });
             throw new Error('Received invalid data from LibreView: missing token or id');
@@ -44,10 +37,7 @@ async function setToken(email, password) {
         // Hash the Libre ID
         const hashedLibreId = crypto.createHash('sha256').update(id).digest('hex');
         HEADERS.authorization = `Bearer ${token}`;
-        HEADERS['Account-Id'] = hashedLibreId;
-
-        console.log('Token 2:', token);
-        console.log('Hashed LibreId 2:', hashedLibreId);
+        HEADERS['Account-Id'] = hashedLibreId
 
         return { libreToken: token, hashedLibreId };
     } catch (err) {

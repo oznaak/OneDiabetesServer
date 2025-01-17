@@ -22,7 +22,6 @@ const API_ENDPOINT = 'https://api-eu.libreview.io';
 
 
 const authenticateToken = async (req, res, next) => {
-  console.log('xxxx');
   const token = req.headers.authorization?.split(' ')[1];
   const libreToken = req.headers.libreToken;
 
@@ -31,7 +30,6 @@ const authenticateToken = async (req, res, next) => {
   }
 
   try {
-    console.log(token,SECRET_KEY);
     const decoded = jwt.verify(token, SECRET_KEY, { complete: true });
     const userId = decoded.payload.userId;
 
@@ -51,7 +49,6 @@ const authenticateToken = async (req, res, next) => {
   } catch (error) {
     return res.status(401).json({ error: error.message });
   }
-  console.log('finish');
 };
 
 
@@ -64,7 +61,7 @@ mongoose.connect(`mongodb+srv://${dbUsername}:${dbPassword}@oznak.axpkr.mongodb.
 
 
 app.use(cors({
-    origin: ['http://localhost:8081', 'http://192.168.x.x:8081',] // Replace with your local network IP
+    origin: ['http://localhost:8081'] // Replace with your local network IP
   }));
   
 app.use(bodyParser.json());
@@ -99,7 +96,7 @@ app.post('/auth/login', async (req, res) => {
     const isMatch = await user.comparePassword(password);
     if (!isMatch) return res.status(400).json({ error: 'Invalid credentials' });
 
-    const token = jwt.sign({ userId: user._id }, SECRET_KEY, { expiresIn: '1h' });
+    const token = jwt.sign({ userId: user._id }, SECRET_KEY);
 
     res.status(200).json({ token });
   } catch (error) {
@@ -215,4 +212,31 @@ app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
 
+app.post('/api/insulin-log', authenticateToken, async (req, res) => {
+  const { units, type } = req.body;
+  
+  try {
+    const newLog = new InsulinLog({
+      userId: req.user._id,
+      units,
+      type,
+      timestamp: new Date()
+    });
+    
+    await newLog.save();
+    res.status(201).json(newLog);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create insulin log' });
+  }
+});
 
+app.get('/api/insulin-logs', authenticateToken, async (req, res) => {
+  try {
+    const logs = await InsulinLog.find({ userId: req.user._id })
+      .sort({ timestamp: -1 })
+      .limit(10);
+    res.json(logs);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch insulin logs' });
+  }
+});
