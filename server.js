@@ -1,9 +1,8 @@
 require('dotenv').config();
 
-
 const express = require('express');
 const bodyParser = require('body-parser');
-const cors = require('cors'); // Import CORS
+const cors = require('cors');
 const libreService = require('./libreService');
 const axios = require('axios');
 const crypto = require('crypto');
@@ -14,12 +13,10 @@ const jwt = require('jsonwebtoken');
 const app = express();
 const PORT = 3000;
 
-const dbUsername = process.env.DB_USERNAME;
-const dbPassword = process.env.DB_PASSWORD;
-const dbName = process.env.DB_NAME;
+const MONGODBURI = process.env.MONGODB;
 const SECRET_KEY = process.env.SECRET_KEY;
-const API_ENDPOINT = 'https://api-eu.libreview.io'; 
-
+const API_ENDPOINT = process.env.LIBRE_API;
+const LOCAL_HOST = process.env.LOCAL_HOST;
 
 const authenticateToken = async (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
@@ -28,13 +25,10 @@ const authenticateToken = async (req, res, next) => {
   if (!token) {
     return res.status(401).json({ error: 'Authentication token required' });
   }
-
   try {
     const decoded = jwt.verify(token, SECRET_KEY, { complete: true });
     const userId = decoded.payload.userId;
-
     const user = await User.findById(userId);
-    
     if (!user) {
       return res.status(401).json({ error: 'User not found' });
     }
@@ -43,35 +37,25 @@ const authenticateToken = async (req, res, next) => {
     }else{
       req.user = user;
     }   
-
-    // Call next to proceed to the next middleware or route handler
     next();
   } catch (error) {
     return res.status(401).json({ error: error.message });
   }
 };
 
-
-mongoose.connect(`mongodb+srv://${dbUsername}:${dbPassword}@oznak.axpkr.mongodb.net/${dbName}?retryWrites=true&w=majority&appName=oznak`, { 
-  useNewUrlParser: true, 
-  useUnifiedTopology: true 
+mongoose.connect(`${MONGODBURI}`, {
 })
 .then(() => console.log('MongoDB connected'))
 .catch(err => console.log('MongoDB connection error:', err));
 
-
 app.use(cors({
-    origin: ['http://localhost:8081'] // Replace with your local network IP
+    origin: [{LOCAL_HOST}] 
   }));
   
 app.use(bodyParser.json());
 
-
-// Endpoint to login and set the token
-// Registration endpoint
 app.post('/auth/register', async (req, res) => {
   const { email, password } = req.body;
-
   try {
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ error: 'User already exists' });
@@ -85,7 +69,6 @@ app.post('/auth/register', async (req, res) => {
   }
 });
 
-// Login endpoint
 app.post('/auth/login', async (req, res) => {
   const { email, password } = req.body;
 
@@ -109,20 +92,15 @@ app.post('/auth/connect-libre', async (req, res) => {
   const { token, email, password } = req.body;
 
   try {
-    // Get LibreView token and hashedLibreId from LibreView API
     const { libreToken, hashedLibreId } = await libreService.setToken(email, password);
-    //console.log('PLS HAVE THE LIBGRE TOKEN',libreToken)
-    // Store these credentials in the user document
     const user = await User.findByIdAndUpdate(
       jwt.decode(token).userId,
       { 
         libreId: hashedLibreId, 
-        libreToken: libreToken  // We're storing the LibreView token here
+        libreToken: libreToken  
       },
-      //console.log('important',libreToken,hashedLibreId),
       { new: true }
     );
-
     res.status(200).json({ message: 'LibreView account connected', user });
   } catch (error) {
     console.error('Error connecting to LibreView:', error.message);
@@ -132,7 +110,6 @@ app.post('/auth/connect-libre', async (req, res) => {
 
 app.get('/api/patient-id', authenticateToken, async (req, res) => {
   try {
-    // Get the user's LibreView token from the database
     const user = req.user;
     if (!user.libreToken) {
       return res.status(400).json({ error: 'LibreView not connected' });
@@ -153,7 +130,6 @@ app.get('/api/glucose-data', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'LibreView not connected' });
     }
 
-    // Initialize headers with the stored LibreView token
     const headers = {
       'accept-encoding': 'gzip, deflate, br',
       'cache-control': 'no-cache',
@@ -161,15 +137,13 @@ app.get('/api/glucose-data', authenticateToken, async (req, res) => {
       'content-type': 'application/json',
       product: 'llu.ios',
       version: '4.12.0',
-      authorization: `Bearer ${user.libreToken}`,  // Use the stored LibreView token here
+      authorization: `Bearer ${user.libreToken}`,  
       'Account-Id': user.libreId,
     };
 
-    // Get patient ID using the LibreView token
     const patientResponse = await axios.get(`${API_ENDPOINT}/llu/connections`, { headers });
     const patientId = patientResponse.data.data[0].patientId;
 
-    // Get glucose data using the same headers with LibreView token
     const glucoseResponse = await axios.get(
       `${API_ENDPOINT}/llu/connections/${patientId}/graph`, 
       { headers }
@@ -180,7 +154,6 @@ app.get('/api/glucose-data', authenticateToken, async (req, res) => {
     if (connection?.glucoseMeasurement) {
       entries.push(connection.glucoseMeasurement);
     }
-
     res.json({ success: true, data: entries });
   } catch (error) {
     console.error('Error fetching glucose data:', error);
@@ -201,15 +174,6 @@ app.get('/api/libre-token', authenticateToken, async (req, res) => {
     console.error('Error fetching Libre token:', error);
     res.status(500).json({ error: 'Failed to fetch Libre token' });
   }
-});
-
-
-
-app.listen(PORT, () => {
-//const randomSecret = crypto.randomBytes(64).toString('hex'); // 512-bit key in hex format
-//console.log(randomSecret); // Use this in your .env file
-
-  console.log(`Server is running on http://localhost:${PORT}`);
 });
 
 app.post('/api/insulin-log', authenticateToken, async (req, res) => {
@@ -240,3 +204,8 @@ app.get('/api/insulin-logs', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch insulin logs' });
   }
 });
+
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
+});
+

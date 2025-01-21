@@ -1,10 +1,8 @@
-//libreService.js
+require('dotenv').config();
 
 const axios = require('axios');
 const crypto = require('crypto');
-require('dotenv').config();
-
-const API_ENDPOINT = 'https://api-eu.libreview.io'; // Change based on your region
+const API_ENDPOINT = process.env.LIBRE_API;
 const HEADERS = {
     'accept-encoding': 'gzip, deflate, br',
     'cache-control': 'no-cache',
@@ -13,28 +11,25 @@ const HEADERS = {
     product: 'llu.ios',
     version: '4.12.0',
 };
+
 async function setToken(email, password) {
     try {
         const loginData = { email, password };
 
-        // Send the login request
         const response = await axios.post(`${API_ENDPOINT}/llu/auth/login`, loginData, { headers: HEADERS });
 
-        // Ensure the response structure is as expected
         if (!response.data || !response.data.data || !response.data.data.authTicket || !response.data.data.authTicket.token) {
             console.error('Failed to extract token:', response.data);
             throw new Error('Failed to authenticate user: Token missing from response');
         }
 
-        // Direct extraction of the token and user ID
-        const token = response.data.data.authTicket.token;  // Extract token directly
-        const id = response.data.data.user.id;  // Extract user id directly
+        const token = response.data.data.authTicket.token;
+        const id = response.data.data.user.id;
         if (!token || !id) {
             console.error('Missing token or user id:', { token, id });
             throw new Error('Received invalid data from LibreView: missing token or id');
         }
 
-        // Hash the Libre ID
         const hashedLibreId = crypto.createHash('sha256').update(id).digest('hex');
         HEADERS.authorization = `Bearer ${token}`;
         HEADERS['Account-Id'] = hashedLibreId
@@ -48,7 +43,6 @@ async function setToken(email, password) {
         throw new Error('Failed to authenticate user: ' + err.message);
     }
 }
-
 
 async function getPatientId(libreToken) {
     try {
@@ -78,6 +72,5 @@ async function getData(patientId, libreToken) {
         throw new Error('Failed to fetch glucose data: ' + err.message);
     }
 }
-
 
 module.exports = { setToken, getPatientId, getData };
