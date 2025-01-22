@@ -16,14 +16,15 @@ This project was the back-end to a React Native App meant to connect with LibreL
 - Cross platform
 
 
-## Screenshots
+## Getting Started
+### Prerequisites
+- Software/Tools required (e.g., Node.js, Python)
+- Installation instructions
 
-![App Screenshot](https://via.placeholder.com/468x300?text=App+Screenshot+Here)
-
-
-## License
-
-[MIT](https://choosealicense.com/licenses/mit/)
+### Installation
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-username/your-repo.git
 
 
 ## Authors
