@@ -37,8 +37,9 @@ This project was the back-end to a React Native App meant to connect with LibreL
    LOCAL_HOST=this is CORS configuration setup to allow requests from
    LIBRE_API=https://api-eu.libreview.io (this is where it is hardcoded to be .eu as i was using my sensor to test and i already knew it was eu
    MONGODB=mongodb connection url
-
-   
+4. Run server:
+   ```bash
+   npm start server.js
 
 
 ## Authors
