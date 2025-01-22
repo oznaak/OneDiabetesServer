@@ -12,19 +12,33 @@ This project was the back-end to a React Native App meant to connect with LibreL
 
 - Allow users to register/login with jwt
 - Fetches token from Libre API
-- H
-- Cross platform
+- Hashes LibreToken and fetches glucose readings from sensor with patient-id.
+- Log insulin injections endpoints (Started right before dropping the project)
 
 
 ## Getting Started
 ### Prerequisites
-- Software/Tools required (e.g., Node.js, Python)
-- Installation instructions
+- NodeJS
 
-### Installation
+  
+### Installation instructions
+
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/your-repo.git
+   git clone https://github.com/oznaak/OneDiabetesServer.git
+
+2. Install dependencies:
+   ```bash
+   npm install
+
+3. Add environment tables:
+   ```bash
+   SECRET_KEY=JWT Secret Key (needs to be 512bit) check jwt documentantion if needed
+   LOCAL_HOST=this is CORS configuration setup to allow requests from
+   LIBRE_API=https://api-eu.libreview.io (this is where it is hardcoded to be .eu as i was using my sensor to test and i already knew it was eu
+   MONGODB=mongodb connection url
+
+   
 
 
 ## Authors
